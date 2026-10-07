@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Woopire Defense — Global Leaderboard</title>
+<style>
+:root{--bg:#0D0A28;--panel:#1A1445;--hi:#2C2270;--text:#F5F2FF;--dim:#A79FDB;--border:#3F3590;--gold:#FFC93C}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.4 system-ui,sans-serif;padding:20px 12px 40px}
+main{max-width:640px;margin:0 auto}h1{margin:0 0 4px;font-size:24px}p.sub{margin:0 0 16px;color:var(--dim)}
+.row{display:flex;gap:10px;align-items:center;padding:10px 12px;margin-bottom:6px;background:var(--panel);border:1px solid var(--border);border-radius:10px;cursor:pointer}
+.row:hover,.row:focus-visible{border-color:var(--gold);outline:none}.rank{width:36px;font-weight:800;color:var(--dim)}
+.name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lvl{color:var(--gold);font-weight:800}
+.detail{display:none;margin:-2px 0 8px;padding:10px 12px;background:var(--hi);border-radius:0 0 10px 10px;color:var(--dim);font-size:13px}
+.detail.open{display:block}.detail b{color:var(--text)}.note{color:var(--dim);text-align:center;padding:24px}
+</style></head><body><main>
+<h1>🏆 Global Leaderboard</h1><p class="sub">Top players by level. Tap a player for their profile.</p>
+<div id="list"><p class="note">Loading…</p></div></main>
+<script>
+const API='/api/leaderboard',list=document.getElementById('list');
+const pretty=id=>id.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+const fmtTime=ms=>{const m=Math.floor(ms/6e4),h=Math.floor(m/60);return h?h+'h '+m%60+'m':m+'m'};
+function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+function line(label,val){const s=el('span');s.append(el('b',null,label+': '),val);return s}
+async function load(){
+  try{
+    const r=await fetch(API);if(!r.ok)throw 0;
+    const {entries}=await r.json();list.replaceChildren();
+    if(!entries.length){list.append(el('p','note','No scores yet — be the first!'));return}
+    entries.forEach((e,i)=>{
+      const row=el('div','row');row.tabIndex=0;
+      row.append(el('span','rank',i<3?['🥇','🥈','🥉'][i]:'#'+(i+1)),
+        el('span','name',e.name||'Player-'+String(e.id).slice(0,4)),el('span','lvl','Lvl '+e.level));
+      const d=el('div','detail');
+      const parts=[line('Playtime',fmtTime(e.playtimeMs||0)),line('Gems','💎 '+(e.gems||0).toLocaleString()),
+        line('Stages',(e.stagesCleared||0)+'/'+(e.stagesPossible||'?')),
+        line('Team',(e.equipped||[]).map(pretty).join(', ')||'—'),
+        line('Base',e.equippedBase?pretty(e.equippedBase):'None')];
+      parts.forEach((p,k)=>{if(k)d.append(' · ');d.append(p)});
+      const t=()=>d.classList.toggle('open');
+      row.onclick=t;row.onkeydown=ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();t()}};
+      list.append(row,d);
+    });
+  }catch(_){list.replaceChildren(el('p','note',"Couldn't reach the leaderboard — try again in a bit."))}
+}
+load();setInterval(()=>{if(!document.hidden)load()},30000);
+</script></body></html>
